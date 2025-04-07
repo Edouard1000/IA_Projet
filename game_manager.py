@@ -76,18 +76,18 @@ class TextGameManager:
 
 if __name__ == "__main__":
     red = MCTSAgent3(1)
-    black = RandomAgent(-1)
+    black = MCTSAgent(-1)
     black_prooooo = Agent3(-1, depth=8,max_killer_moves=5, futility=3)
 
 
-    n_games = 30
+    n_games = 5
     red_wins = 0
     black_wins = 0
     draws = 0
 
     for i in range(n_games):
         print(f"\n===== GAME {i+1} =====")
-        game = TextGameManager(red, black_prooooo, display=True)
+        game = TextGameManager(red, black, display=True)
         red_score, black_score = game.play()
 
         if red_score > black_score:

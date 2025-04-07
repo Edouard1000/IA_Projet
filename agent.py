@@ -248,7 +248,7 @@ class Node:
     def is_fully_expanded(self):
         return len(self.untried_actions) == 0
 
-    def best_child(self, c_param=1.4):
+    def best_child(self, c_param=1.4): # UCT
         choices_weights = [
             (child.value / child.visits) + c_param * math.sqrt(math.log(self.visits) / child.visits)
             for child in self.children
@@ -346,9 +346,40 @@ class MCTSAgent2(Agent):
 
         return score
     
+class Node:
+    def __init__(self, state, parent=None, action=None):
+        self.state = state
+        self.parent = parent
+        self.action = action
+        self.children = []
+        self.visits = 0
+        self.value = 0
+        self.untried_actions = state.actions()
+        self.action_visits = defaultdict(int)
+
+    def is_fully_expanded(self):
+        return len(self.untried_actions) == 0
+
+    def best_child(self, c_param=1.4): # UCT
+        choices_weights = [
+            (child.value / child.visits) + c_param * math.sqrt(math.log(self.visits) / child.visits)
+            for child in self.children
+        ]
+        return self.children[choices_weights.index(max(choices_weights))]
+
+    def expand(self):
+        action = self.untried_actions.pop()
+        next_state = self.state.result(action)
+        child_node = Node(next_state, parent=self, action=action)
+        self.children.append(child_node)
+        return child_node
+
+    def update(self, reward):
+        self.visits += 1
+        self.value += reward
 
 class MCTSAgent3(Agent): # C'est lui le big boss !!!!
-    def __init__(self, rollout_depth=10, max_time=1.0):
+    def __init__(self, rollout_depth=15, max_time=5):
         self.rollout_depth = rollout_depth
         self.max_time = max_time
 
@@ -356,7 +387,8 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
         root = Node(state)
         start_time = time.time()
 
-        while time.time() - start_time < min(self.max_time, remaining_time):
+        time_budget = min(self.max_time, max(1.0, remaining_time / 60))  # entre 1 sec et self.max_time
+        while time.time() - start_time < time_budget:
             node = root
             # SELECTION
             while node.is_fully_expanded() and node.children:
@@ -393,7 +425,7 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
             from_pos = action.start
             score = 0
 
-            #  Favoriser les promotions (déjà présent)
+            #  Favoriser les promotions 
             neighbors = [(to_pos[0] + dx, to_pos[1] + dy) for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]]
             for n in neighbors:
                 if n in state.pieces and state.pieces[n] == state.to_move():
