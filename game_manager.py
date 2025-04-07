@@ -2,7 +2,8 @@ import fenix
 import time
 from copy import deepcopy
 from random_agent import RandomAgent
-from agent import MCTSAgent, Agent2
+from agent import MCTSAgent, Agent2, MCTSAgent2, Agent3, MCTSAgent3
+
 class TextGameManager:
     def __init__(self, agent_1, agent_2, time_limit=300, display=True):
         self.agent_1 = agent_1
@@ -74,17 +75,19 @@ class TextGameManager:
             return 1, -1
 
 if __name__ == "__main__":
-    red = MCTSAgent(1)
-    black = Agent2(-1)
+    red = MCTSAgent3(1)
+    black = RandomAgent(-1)
+    black_prooooo = Agent3(-1, depth=8,max_killer_moves=5, futility=3)
 
-    n_games = 50
+
+    n_games = 30
     red_wins = 0
     black_wins = 0
     draws = 0
 
     for i in range(n_games):
-        
-        game = TextGameManager(red, black, display=True)
+        print(f"\n===== GAME {i+1} =====")
+        game = TextGameManager(red, black_prooooo, display=True)
         red_score, black_score = game.play()
 
         if red_score > black_score:

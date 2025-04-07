@@ -6,7 +6,7 @@ import threading
 import time
 from copy import deepcopy
 from random_agent import RandomAgent
-from agent import MCTSAgent, Agent2
+from agent import MCTSAgent, Agent2, MCTSAgent2, Agent3, MCTSAgent3
 class VisualGameManager:
     """
     A visual game manager for the Fenix game.
@@ -270,7 +270,7 @@ class VisualGameManager:
 
 
 if __name__ == "__main__":
-    red = MCTSAgent(1)
+    red = MCTSAgent3(1)
     black = RandomAgent(-1) 
     gameManger = VisualGameManager(red, black)        
      
