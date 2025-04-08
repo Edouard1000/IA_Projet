@@ -386,8 +386,26 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
     def act(self, state, remaining_time):
         root = Node(state)
         start_time = time.time()
+        player = state.to_move()
+        actions = state.actions()
 
-        time_budget = min(self.max_time, max(1.0, remaining_time / 60))  # entre 1 sec et self.max_time
+        # Revive le roi des que possible
+        if state.can_create_king and state.turn >= 5:
+            king_res = []
+            for action in actions:
+                from_val = state.pieces.get(action.start, 0)
+                to_val = state.pieces.get(action.end, 0)
+
+                # Roi = général + soldat du même camp
+                values = sorted([abs(from_val), abs(to_val)])
+                if from_val * to_val > 0 and values == [1, 2]:
+                    king_res.append(action)
+            
+            actions = self.prioritize_actions(king_res, state)
+            if actions:
+                return actions[0]
+        
+        time_budget = min(self.max_time, max(1.0, remaining_time / 60)) 
         while time.time() - start_time < time_budget:
             node = root
             # SELECTION
@@ -431,7 +449,7 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
             if from_val * to_val > 0:  # Deux pièces du même camp
                 stack_val = abs(from_val + to_val)
                 if stack_val == 2:
-                    score += 1.5
+                    score += 5
 
             #  Favoriser les captures (surtout roi/général)
             for r_captured in action.removed:
@@ -470,7 +488,7 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
 
         for (r, c), piece in state.pieces.items():
             abs_val = abs(piece)
-            value = 1 if abs_val == 1 else 2 if abs_val == 2 else 3
+            value = 1 if abs_val == 1 else 4 if abs_val == 2 else 5
 
             if piece * player > 0:
                 # Valeur brute
@@ -481,7 +499,7 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
 
                 # Bonus pour pièce sur le bord
                 if r == 0 or r == 6 or c == 0 or c == 7:
-                    border_bonus += 0.3
+                    border_bonus += 0.5
 
                 # Bonus pour structure en carré (forteresse)
                 if ((r+1, c) in state.pieces and state.pieces[(r+1, c)] * player > 0 and
@@ -491,66 +509,30 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
 
                 # Roi : pénaliser s’il est au front selon la phase
                 if abs_val == 3:
-                    if (r == 0 or r == 6 or c == 0 or c == 7):
-                        king_exposed_penalty -= 1.0  # en coin
+                    # roi proche de son coin à lui
+                    def is_adjacent(pos1, pos2):
+                        return abs(pos1[0] - pos2[0]) <= 1 and abs(pos1[1] - pos2[1]) <= 1
+
+                    target_corner = (0, 0) if player == 1 else (6, 7)
 
                     if phase == "early":
-                        if (player == 1 and r <= 2) or (player == -1 and r >= 4):
-                            king_exposed_penalty -= 2.0
+                        if is_adjacent((r, c), target_corner):
+                            king_exposed_penalty += 3
                     elif phase == "mid":
                         if (player == 1 and r <= 1) or (player == -1 and r >= 5):
                             king_exposed_penalty -= 1.0
 
-                    ally_count = 0
-                    for dx in [-1, 0, 1]:
-                        for dy in [-1, 0, 1]:
-                            if dx == 0 and dy == 0:
-                                continue
-                            nx, ny = r + dx, c + dy
-                            if (nx, ny) in state.pieces and state.pieces[(nx, ny)] * player > 0:
-                                ally_count += 1
-                    if phase == "early":
-                        if ally_count > 5:
-                            king_exposed_penalty += 1.5
-                        elif ally_count <= 5:
-                            king_exposed_penalty -= 1.5
-                    if phase == "late":
-                        if ally_count == 0:
-                            king_exposed_penalty -= 0.5
-
             elif piece * opponent > 0:
                 score -= value
 
-        # Danger potentiel : résurrection du roi adverse
+        # résurrection du roi adverse
         if state.can_create_king and state.current_player == opponent:
-            score -= 5
+            score -= 3
 
         # Total des bonus/penalités
         score += border_bonus + fortress_bonus + king_exposed_penalty
 
         return score
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
