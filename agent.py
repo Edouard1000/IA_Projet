@@ -379,7 +379,7 @@ class Node:
         self.value += reward
 
 class MCTSAgent3(Agent): # C'est lui le big boss !!!!
-    def __init__(self, rollout_depth=15, max_time=5):
+    def __init__(self, rollout_depth=15, max_time=2):
         self.rollout_depth = rollout_depth
         self.max_time = max_time
 
@@ -465,8 +465,9 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
                 # Valeur brute
                 score += value
 
-                # Bonus position centrale
-                score += center_weight * (3.5 - abs(3.5 - r)) * (4 - abs(4 - c))
+                # Bonus position centrale (sauf pour le roi)
+                if abs_val != 3:
+                    score += center_weight * (3.5 - abs(3.5 - r)) * (4 - abs(4 - c))
 
                 # Bonus pour pièce sur le bord
                 if r == 0 or r == 6 or c == 0 or c == 7:
