@@ -271,7 +271,7 @@ class VisualGameManager:
 
 if __name__ == "__main__":
     red = MCTSAgent3(1)
-    black = RandomAgent(-1) 
+    black = MCTSAgent(-1) 
     gameManger = VisualGameManager(red, black)        
      
 

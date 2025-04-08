@@ -426,10 +426,12 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
             score = 0
 
             #  Favoriser les promotions 
-            neighbors = [(to_pos[0] + dx, to_pos[1] + dy) for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]]
-            for n in neighbors:
-                if n in state.pieces and state.pieces[n] == state.to_move():
-                    score += 0.5
+            from_val = state.pieces.get(from_pos, 0)
+            to_val = state.pieces.get(to_pos, 0)
+            if from_val * to_val > 0:  # Deux pièces du même camp
+                stack_val = abs(from_val + to_val)
+                if stack_val == 2:
+                    score += 1.5
 
             #  Favoriser les captures (surtout roi/général)
             for r_captured in action.removed:
