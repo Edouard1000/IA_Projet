@@ -432,7 +432,8 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
         while not current_state.is_terminal() and depth < self.rollout_depth:
             actions = current_state.actions()
             actions = self.prioritize_actions(actions, current_state)
-            action = random.choice(actions[:min(len(actions), 10)])  # limit to top 5
+            top_k = 10 if depth < self.rollout_depth / 2 else 5
+            action = random.choice(actions[:min(len(actions), top_k)])  # limit to top top_k
             current_state = current_state.result(action)
             depth += 1
         return self.evaluate_state(current_state, player)
