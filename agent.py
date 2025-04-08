@@ -457,6 +457,15 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
         king_exposed_penalty = 0
         fortress_bonus = 0
 
+        # Évaluer la phase de jeu
+        total_pieces = len(state.pieces)
+        if total_pieces > 18:
+            phase = "early"
+        elif total_pieces > 10:
+            phase = "mid"
+        else:
+            phase = "late"
+
         for (r, c), piece in state.pieces.items():
             abs_val = abs(piece)
             value = 1 if abs_val == 1 else 2 if abs_val == 2 else 3
@@ -465,9 +474,8 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
                 # Valeur brute
                 score += value
 
-                # Bonus position centrale (sauf pour le roi)
-                if abs_val != 3:
-                    score += center_weight * (3.5 - abs(3.5 - r)) * (4 - abs(4 - c))
+                # Bonus position centrale
+                score += center_weight * (3.5 - abs(3.5 - r)) * (4 - abs(4 - c))
 
                 # Bonus pour pièce sur le bord
                 if r == 0 or r == 6 or c == 0 or c == 7:
@@ -479,9 +487,34 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
                     (r+1, c+1) in state.pieces and state.pieces[(r+1, c+1)] * player > 0):
                     fortress_bonus += 1.0
 
-                # Pénalité si roi en coin
-                if abs_val == 3 and (r == 0 or r == 6 or c == 0 or c == 7):
-                    king_exposed_penalty -= 1.5
+                # Roi : pénaliser s’il est au front selon la phase
+                if abs_val == 3:
+                    if (r == 0 or r == 6 or c == 0 or c == 7):
+                        king_exposed_penalty -= 1.0  # en coin
+
+                    if phase == "early":
+                        if (player == 1 and r <= 2) or (player == -1 and r >= 4):
+                            king_exposed_penalty -= 2.0
+                    elif phase == "mid":
+                        if (player == 1 and r <= 1) or (player == -1 and r >= 5):
+                            king_exposed_penalty -= 1.0
+
+                    ally_count = 0
+                    for dx in [-1, 0, 1]:
+                        for dy in [-1, 0, 1]:
+                            if dx == 0 and dy == 0:
+                                continue
+                            nx, ny = r + dx, c + dy
+                            if (nx, ny) in state.pieces and state.pieces[(nx, ny)] * player > 0:
+                                ally_count += 1
+                    if phase == "early":
+                        if ally_count > 5:
+                            king_exposed_penalty += 1.5
+                        elif ally_count <= 5:
+                            king_exposed_penalty -= 1.5
+                    if phase == "late":
+                        if ally_count == 0:
+                            king_exposed_penalty -= 0.5
 
             elif piece * opponent > 0:
                 score -= value
