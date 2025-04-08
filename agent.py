@@ -124,7 +124,7 @@ class Agent3(Agent):
 
 
 class MCTSAgent(Agent):
-    def __init__(self, player, simulations=1):
+    def __init__(self, player, simulations=10):
         super().__init__(player)
         self.simulations = simulations  # nombre de simulations K
 
@@ -379,7 +379,7 @@ class Node:
         self.value += reward
 
 class MCTSAgent3(Agent): # C'est lui le big boss !!!!
-    def __init__(self, rollout_depth=15, max_time=2):
+    def __init__(self, rollout_depth=5, max_time=5):
         self.rollout_depth = rollout_depth
         self.max_time = max_time
 
@@ -432,7 +432,7 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
         while not current_state.is_terminal() and depth < self.rollout_depth:
             actions = current_state.actions()
             actions = self.prioritize_actions(actions, current_state)
-            action = random.choice(actions[:min(len(actions), 5)])  # limit to top 5
+            action = random.choice(actions[:min(len(actions), 10)])  # limit to top 5
             current_state = current_state.result(action)
             depth += 1
         return self.evaluate_state(current_state, player)
@@ -454,7 +454,7 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
             #  Favoriser les captures (surtout roi/général)
             for r_captured in action.removed:
                 captured_val = abs(state.pieces.get(r_captured, 0))
-                score += 0.5 * captured_val  # roi=3, général=2, soldat=1
+                score += 0.5 * captured_val  
 
             #  Éviter d’isoler une pièce
             isolated_penalty = 0
@@ -472,10 +472,22 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
     def evaluate_state(self, state, player):
         opponent = -player
         score = 0
-        center_weight = 0.2
+        center_weight = 0.1
         border_bonus = 0
         king_exposed_penalty = 0
         fortress_bonus = 0
+
+        if state.is_terminal():
+            utility = state.utility(player)
+            if utility == 1:
+                return 30
+            elif utility == -1:
+                return -30
+            else:
+                return 0
+
+        if not state._has_king and state.turn >= 5:
+            score -= 10
 
         # Évaluer la phase de jeu
         total_pieces = len(state.pieces)
@@ -488,7 +500,7 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
 
         for (r, c), piece in state.pieces.items():
             abs_val = abs(piece)
-            value = 1 if abs_val == 1 else 4 if abs_val == 2 else 5
+            value = 1 if abs_val == 1 else 10 if abs_val == 2 else 15
 
             if piece * player > 0:
                 # Valeur brute
@@ -499,13 +511,13 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
 
                 # Bonus pour pièce sur le bord
                 if r == 0 or r == 6 or c == 0 or c == 7:
-                    border_bonus += 0.5
+                    border_bonus += 0.3
 
                 # Bonus pour structure en carré (forteresse)
                 if ((r+1, c) in state.pieces and state.pieces[(r+1, c)] * player > 0 and
                     (r, c+1) in state.pieces and state.pieces[(r, c+1)] * player > 0 and
                     (r+1, c+1) in state.pieces and state.pieces[(r+1, c+1)] * player > 0):
-                    fortress_bonus += 1.0
+                    fortress_bonus += 0.6
 
                 # Roi : pénaliser s’il est au front selon la phase
                 if abs_val == 3:
@@ -518,19 +530,27 @@ class MCTSAgent3(Agent): # C'est lui le big boss !!!!
                     if phase == "early":
                         if is_adjacent((r, c), target_corner):
                             king_exposed_penalty += 3
-                    elif phase == "mid":
-                        if (player == 1 and r <= 1) or (player == -1 and r >= 5):
-                            king_exposed_penalty -= 1.0
+
+                    if phase in ["early", "mid"]:
+                            if player == 1 and not (0 <= r <= 2 and 0 <= c <= 2):
+                                king_exposed_penalty -= 2  
+                            elif player == -1 and not (4 <= r <= 6 and 5 <= c <= 7):
+                                king_exposed_penalty -= 2  
 
             elif piece * opponent > 0:
                 score -= value
 
         # résurrection du roi adverse
         if state.can_create_king and state.current_player == opponent:
-            score -= 3
+            score -= 1
+
+        if not state.is_terminal() and 3 * opponent not in state.pieces.values():
+            score += 10  
 
         # Total des bonus/penalités
         score += border_bonus + fortress_bonus + king_exposed_penalty
+
+        
 
         return score
 
